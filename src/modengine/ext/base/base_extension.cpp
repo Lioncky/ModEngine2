@@ -20,7 +20,26 @@ extern "C" __declspec(dllexport) HRESULT __cdecl DirectInput8Create(
     LPVOID* ppvOut,
     LPUNKNOWN punkOuter)
 {
-    return hooked_DirectInput8Create.original(hinst, dwVersion, riidltf, ppvOut, punkOuter);
+    // return hooked_DirectInput8Create.original(hinst, dwVersion, riidltf, ppvOut, punkOuter);
+
+    // fix eldenring missing pDirectInput8Create with start with sideload
+    static HRESULT(WINAPI * pDirectInput8Create)(HINSTANCE hinst, DWORD dwVersion, REFIID riidltf, LPVOID * ppvOut, LPUNKNOWN punkOuter);
+
+    if (!pDirectInput8Create) {
+        WCHAR tmp[200]; HMODULE proxy;
+        constexpr WCHAR nm[] = L"\\dinput8";
+        ::lstrcpyW(tmp + ::GetSystemDirectoryW(tmp, 200), nm);
+
+        if (proxy = ::LoadLibraryW(tmp))
+            pDirectInput8Create = (decltype(pDirectInput8Create))GetProcAddress(proxy, "DirectInput8Create");
+
+        if (!pDirectInput8Create) {
+            ::MessageBoxW(0, L"!pDirectInput8Create", L"ERROR", MB_ICONERROR);
+            return 0;
+        }
+    }
+
+    return pDirectInput8Create(hinst, dwVersion, riidltf, ppvOut, punkOuter);
 }
 
 long __stdcall hooked_D3D11Present(IDXGISwapChain* swap_chain, UINT sync_interval, UINT flags)
